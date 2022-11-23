@@ -8,22 +8,30 @@
 #include <bluefruit.h>
 
 #define TIMING_DEBUG 1
+#define FILTER 50
 
 #define SensorInputPin0 A0 // Forearm
-#define SensorInputPin1 A1 // Bicept
-#define SensorInputPin2 A2 // Tricept
+#define SensorInputPin1 A3 // Bicept
+#define SensorInputPin2 A5 // Tricept
 
 EMGFilters myFilter;
 
 SAMPLE_FREQUENCY sampleRate = SAMPLE_FREQ_1000HZ;
 NOTCH_FREQUENCY humFreq = NOTCH_FREQ_50HZ;
 static int Threshold0 = 0;
-static int64_t Sum0 = 0;
+static int Sum0 = 0;
 static int Count = 0;
 static int Threshold1 = 0;
-static int64_t Sum1 = 0;
+static int Sum1 = 0;
 static int Threshold2 = 0;
-static int64_t Sum2 = 0;
+static int Sum2 = 0;
+static int pastVals0 [FILTER];
+static int pastVals1 [FILTER];
+static int pastVals2 [FILTER];
+static int idx = 0;
+static int pastVals0Sum = 0;
+static int pastVals1Sum = 0;
+static int pastVals2Sum = 0;
 
 unsigned long timeStamp;
 unsigned long timeBudget;
@@ -149,63 +157,60 @@ void setup() {
 
 void loop() {
   timeStamp = micros();
+  int Value0 = analogRead(SensorInputPin0);
+  int Value1 = analogRead(SensorInputPin1);
+  int Value2 = analogRead(SensorInputPin2);
 
+  // filter processing
+  int DataAfterFilter0 = myFilter.update(Value0);
+  int DataAfterFilter1 = myFilter.update(Value1);
+  int DataAfterFilter2 = myFilter.update(Value2);
+
+  int envlope0 = sq(DataAfterFilter0);
+  int envlope1 = sq(DataAfterFilter1);
+  int envlope2 = sq(DataAfterFilter2);
+
+  pastVals0Sum += envlope0 - pastVals0[idx];
+  pastVals0[idx] = envlope0;
+  pastVals1Sum += envlope1 - pastVals1[idx];
+  pastVals1[idx] = envlope1;
+  pastVals2Sum += envlope2 - pastVals2[idx];
+  pastVals2[idx] = envlope2;
+
+  envlope0 = pastVals0Sum / FILTER;
+  envlope1 = pastVals1Sum / FILTER;
+  envlope2 = pastVals2Sum / FILTER;
+  idx = (idx + 1) % FILTER;
+  
   if (Bluefruit.connected()) {
     if (armw.read8() == 0x32 && cal == 1) {
       Serial.println("Done Calibrating...");
-      Threshold0 = Count > 0 ? (int) (Sum0 / Count) : 0;
-      Threshold1 = Count > 0 ? (int) (Sum1 / Count) : 0;
-      Threshold2 = Count > 0 ? (int) (Sum2 / Count) : 0;
+      Threshold0 = Sum0 / Count;
+      Threshold1 = Sum1 / Count;
+      Threshold2 = Sum2 / Count;
       cal = 0;
-      Threshold0 = 0;
       Sum0 = 0;
       Count = 0;
-      Threshold1 = 0;
       Sum1 = 0;
-      Threshold2 = 0;
       Sum2 = 0;
     } else if (armw.read8() == 0x31 || cal == 1) {
       Serial.println("Calibrating...");
-      int Value0 = analogRead(SensorInputPin0);
-      int Value1 = analogRead(SensorInputPin1);
-      int Value2 = analogRead(SensorInputPin2);
-
-      // filter processing
-      int DataAfterFilter0 = myFilter.update(Value0);
-      int DataAfterFilter1 = myFilter.update(Value1);
-      int DataAfterFilter2 = myFilter.update(Value2);
-
-      int envlope0 = sq(DataAfterFilter0);
-      int envlope1 = sq(DataAfterFilter1);
-      int envlope2 = sq(DataAfterFilter2);
       Sum0 += (envlope0 > 0) ? envlope0 : 0;
       Sum1 += (envlope1 > 0) ? envlope1 : 0;
       Sum2 += (envlope2 > 0) ? envlope2 : 0;
       Count++;
       cal = 1;
     } else {
-      int Value0 = analogRead(SensorInputPin0);
-      int Value1 = analogRead(SensorInputPin1);
-      int Value2 = analogRead(SensorInputPin2);
-
-      // filter processing
-      int DataAfterFilter0 = myFilter.update(Value0);
-      int DataAfterFilter1 = myFilter.update(Value1);
-      int DataAfterFilter2 = myFilter.update(Value2);
-
-      int envlope0 = sq(DataAfterFilter0);
-      int envlope1 = sq(DataAfterFilter1);
-      int envlope2 = sq(DataAfterFilter2);
       // any value under threshold will be set to zero
       envlope0 = (envlope0 > Threshold0) ? envlope0 - Threshold0 : 0;
       envlope1 = (envlope1 > Threshold1) ? envlope1 - Threshold1 : 0;
       envlope2 = (envlope2 > Threshold2) ? envlope2 - Threshold2 : 0;
       int armdata[3] = {envlope0, envlope1, envlope2};
-      Serial.print("Sensor 0: ");
-      Serial.println(envlope0);
-      Serial.print("Sensor 1: ");
-      Serial.println(envlope1);
-      Serial.print("Sensor 2: ");
+      //Serial.print("Sensor 0: ");
+      Serial.print(envlope0);
+      Serial.print(" ");
+      Serial.print(envlope1);
+      Serial.print(" ");
       Serial.println(envlope2);
       armc.notify(armdata, sizeof(armdata));
     }
