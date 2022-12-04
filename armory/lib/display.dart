@@ -46,20 +46,47 @@ class DisplayPageState extends State<DisplayPage> {
         .discoverServices()
         .asStream()
         .listen((List<BluetoothService> services) {
-      for (BluetoothService service in services) {
-        _addServiceTolist(service);
-      }
+          for (BluetoothService service in services) {
+            _addServiceTolist(service);
+            for (BluetoothCharacteristic characteristic in service.characteristics) {
+              if (characteristic.uuid.toString().substring(0, 8) == '00005678') {
+                characteristic.setNotifyValue(true);
+                characteristic.value.listen((value) {
+                  setState(() {
+                    var real_value = List.generate(3, (int i) => fromBytesToInt32(value[4*i], value[4*i+1], value[4*i+2], value[4*i+3]), growable: false);
+                    widget.readValues[characteristic.uuid] = real_value;
+                  });
+                  _updateDataSource(characteristic);
+                });
+              }  
+            }
+          }
     });
-    count = 0;
+    count = 19;
     chartData = <_ChartData>[
       _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0),
     ];
-    timer =
-        Timer.periodic(const Duration(milliseconds: 100), _updateDataSource);
   }
 
   void dispose() {
-    timer?.cancel();
     chartData!.clear();
     _chartSeriesControllerA = null;
     _chartSeriesControllerB = null;
@@ -67,14 +94,9 @@ class DisplayPageState extends State<DisplayPage> {
     super.dispose();
   }
 
-  int _getRandomInt(int min, int max) {
-    final math.Random random = math.Random();
-    return min + random.nextInt(max - min);
-  }
-
-  void _updateDataSource(Timer timer) {
-    chartData!.add(_ChartData(count, _getRandomInt(10, 10000),
-        _getRandomInt(10000, 30000), _getRandomInt(40000, 50000)));
+  void _updateDataSource(BluetoothCharacteristic characteristic) {
+    chartData!.add(_ChartData(count, widget.readValues[characteristic.uuid]![0],
+        widget.readValues[characteristic.uuid]![1], widget.readValues[characteristic.uuid]![2]));
     if (chartData!.length == 20) {
       chartData!.removeAt(0);
       _chartSeriesControllerA?.updateDataSource(
@@ -150,77 +172,6 @@ class DisplayPageState extends State<DisplayPage> {
   List<ButtonTheme> _buildReadWriteNotifyButton(
       BluetoothCharacteristic characteristic) {
     List<ButtonTheme> buttons = <ButtonTheme>[];
-
-    if (characteristic.properties.read) {
-      buttons.add(
-        ButtonTheme(
-          minWidth: 10,
-          height: 20,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: TextButton(
-              child: const Text('READ', style: TextStyle(color: Colors.white)),
-              onPressed: () async {
-                var sub = characteristic.value.listen((value) {
-                  setState(() {
-                    widget.readValues[characteristic.uuid] = value;
-                  });
-                });
-                await characteristic.read();
-                sub.cancel();
-              },
-            ),
-          ),
-        ),
-      );
-    }
-    if (characteristic.properties.write) {
-      buttons.add(
-        ButtonTheme(
-          minWidth: 10,
-          height: 20,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: ElevatedButton(
-              child: const Text('WRITE', style: TextStyle(color: Colors.white)),
-              onPressed: () async {
-                await showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text("Write"),
-                        content: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: TextField(
-                                controller: _writeController,
-                              ),
-                            ),
-                          ],
-                        ),
-                        actions: <Widget>[
-                          TextButton(
-                            child: const Text("Send"),
-                            onPressed: () {
-                              characteristic.write(
-                                  utf8.encode(_writeController.value.text));
-                            },
-                          ),
-                          TextButton(
-                            child: const Text("Cancel"),
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      );
-                    });
-              },
-            ),
-          ),
-        ),
-      );
-    }
     if (characteristic.properties.notify) {
       buttons.add(
         ButtonTheme(
@@ -234,7 +185,8 @@ class DisplayPageState extends State<DisplayPage> {
               onPressed: () async {
                 characteristic.value.listen((value) {
                   setState(() {
-                    widget.readValues[characteristic.uuid] = value;
+                    var real_value = List.generate(3, (int i) => fromBytesToInt32(value[4*i], value[4*i+1], value[4*i+2], value[4*i+3]), growable: false);
+                    widget.readValues[characteristic.uuid] = real_value;
                   });
                 });
                 await characteristic.setNotifyValue(true);
@@ -249,46 +201,8 @@ class DisplayPageState extends State<DisplayPage> {
   }
 
   ListView _buildConnectDeviceView() {
-    print("In connect device view");
     List<Widget> containers = <Widget>[];
-
-    // for (BluetoothService service in widget.services) {
-    //   List<Widget> characteristicsWidget = <Widget>[];
-
-    //   for (BluetoothCharacteristic characteristic in service.characteristics) {
-    //     characteristicsWidget.add(
-    //       Align(
-    //         alignment: Alignment.centerLeft,
-    //         child: Column(
-    //           children: <Widget>[
-    //             Row(
-    //               children: <Widget>[
-    //                 Text(characteristic.uuid.toString(),
-    //                     style: const TextStyle(fontWeight: FontWeight.bold)),
-    //               ],
-    //             ),
-    //             Row(
-    //               children: <Widget>[
-    //                 ..._buildReadWriteNotifyButton(characteristic),
-    //               ],
-    //             ),
-    //             Row(
-    //               children: <Widget>[
-    //                 Text('Value: ${widget.readValues[characteristic.uuid]}'),
-    //               ],
-    //             ),
-    //             const Divider(),
-    //           ],
-    //         ),
-    //       ),
-    //     );
-    //   }
-    //   containers.add(
-    //     ExpansionTile(
-    //         title: Text(service.uuid.toString()),
-    //         children: characteristicsWidget),
-    //   );
-    // }
+    List<String> percentages = chartData![18].getPercentages();
     containers.add(Container(
       margin: const EdgeInsets.all(24),
       child: Row(
@@ -322,11 +236,11 @@ class DisplayPageState extends State<DisplayPage> {
                         margin: const EdgeInsets.all(0.0),
                         padding: const EdgeInsets.all(0.0),
                         height: 50,
-                        child: const FittedBox(
+                        child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            "10%",
-                            style: TextStyle(fontSize: 50),
+                            percentages[0],
+                            style: const TextStyle(fontSize: 50),
                           ),
                         ),
                       ),
@@ -367,11 +281,11 @@ class DisplayPageState extends State<DisplayPage> {
                         margin: const EdgeInsets.all(0.0),
                         padding: const EdgeInsets.all(0.0),
                         height: 50,
-                        child: const FittedBox(
+                        child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            "10%",
-                            style: TextStyle(fontSize: 50),
+                            percentages[1],
+                            style: const TextStyle(fontSize: 50),
                           ),
                         ),
                       ),
@@ -412,11 +326,11 @@ class DisplayPageState extends State<DisplayPage> {
                         margin: const EdgeInsets.all(0.0),
                         padding: const EdgeInsets.all(0.0),
                         height: 50,
-                        child: const FittedBox(
+                        child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            "10%",
-                            style: TextStyle(fontSize: 50),
+                            percentages[2],
+                            style: const TextStyle(fontSize: 50),
                           ),
                         ),
                       ),
@@ -487,10 +401,25 @@ Color getColor(int percentage) {
   return Color.fromARGB(255, r, g, b);
 }
 
+int fromBytesToInt32(int b3, int b2, int b1, int b0) {
+  return (b0 << 24) | (b1 << 16) | (b2 << 8) | b3;
+}
+
 class _ChartData {
   _ChartData(this.time, this.tricept, this.bicept, this.forearm);
   final int time;
-  final num tricept;
-  final num bicept;
-  final num forearm;
+  final int tricept;
+  final int bicept;
+  final int forearm;
+
+  List<String> getPercentages() {
+    int sum = tricept + bicept + forearm;
+    if (sum == 0) {
+      return ["33%", "33%", "33%"];
+    }
+    int div1 = (tricept / sum * 100).toInt();
+    int div2 = (bicept / sum * 100).toInt();
+    int div3 = (forearm / sum * 100).toInt();
+    return ["$div1%", "$div2%", "$div3%"];
+  }
 }
