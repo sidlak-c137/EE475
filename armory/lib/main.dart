@@ -6,7 +6,7 @@ void main() {
   runApp(MaterialApp(
     title: 'BLE Demo',
     theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.indigo,
         scaffoldBackgroundColor: const Color(0xFFFFFFFF)),
     home: const HomePage(title: 'The Armory'),
   ));

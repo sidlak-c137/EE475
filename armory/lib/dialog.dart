@@ -25,7 +25,7 @@ class BlurryDialog extends StatelessWidget {
               },
             ),
             ElevatedButton(
-              child: const Text("Connect"),
+              child: const Text("Confirm"),
               onPressed: () async {
                 continueCallBack();
               },

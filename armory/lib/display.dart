@@ -7,6 +7,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import 'connect.dart';
+import 'dialog.dart';
 
 class DisplayPage extends StatefulWidget {
   DisplayPage({Key? key, required this.title, required this.connectedDevice})
@@ -53,36 +54,41 @@ class DisplayPageState extends State<DisplayPage> {
                 characteristic.setNotifyValue(true);
                 characteristic.value.listen((value) {
                   setState(() {
-                    var real_value = List.generate(3, (int i) => fromBytesToInt32(value[4*i], value[4*i+1], value[4*i+2], value[4*i+3]), growable: false);
+                    print(value);
+                    print(value.length);
+                    var real_value = List.generate(3, (int i) => fromBytesToInt32(value[4*i], value[4*i+1], value[4*i+2], value[4*i+3]), growable: true);
+                    real_value.add(value[4*3+3]);
+                    real_value.add(value[4*3+1]);
+                    real_value.add(value[4*3+2]);
                     widget.readValues[characteristic.uuid] = real_value;
                   });
                   _updateDataSource(characteristic);
                 });
-              }  
+              }
             }
           }
     });
     count = 19;
     chartData = <_ChartData>[
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
-      _ChartData(0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
+      _ChartData(0, 0, 0, 0, 0, 0, 0),
     ];
   }
 
@@ -95,8 +101,9 @@ class DisplayPageState extends State<DisplayPage> {
   }
 
   void _updateDataSource(BluetoothCharacteristic characteristic) {
+    print(widget.readValues[characteristic.uuid]);
     chartData!.add(_ChartData(count, widget.readValues[characteristic.uuid]![0],
-        widget.readValues[characteristic.uuid]![1], widget.readValues[characteristic.uuid]![2]));
+        widget.readValues[characteristic.uuid]![1], widget.readValues[characteristic.uuid]![2], widget.readValues[characteristic.uuid]![3], widget.readValues[characteristic.uuid]![4], widget.readValues[characteristic.uuid]![5]));
     if (chartData!.length == 20) {
       chartData!.removeAt(0);
       _chartSeriesControllerA?.updateDataSource(
@@ -169,40 +176,10 @@ class DisplayPageState extends State<DisplayPage> {
             ]));
   }
 
-  List<ButtonTheme> _buildReadWriteNotifyButton(
-      BluetoothCharacteristic characteristic) {
-    List<ButtonTheme> buttons = <ButtonTheme>[];
-    if (characteristic.properties.notify) {
-      buttons.add(
-        ButtonTheme(
-          minWidth: 10,
-          height: 20,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: ElevatedButton(
-              child:
-                  const Text('NOTIFY', style: TextStyle(color: Colors.white)),
-              onPressed: () async {
-                characteristic.value.listen((value) {
-                  setState(() {
-                    var real_value = List.generate(3, (int i) => fromBytesToInt32(value[4*i], value[4*i+1], value[4*i+2], value[4*i+3]), growable: false);
-                    widget.readValues[characteristic.uuid] = real_value;
-                  });
-                });
-                await characteristic.setNotifyValue(true);
-              },
-            ),
-          ),
-        ),
-      );
-    }
-
-    return buttons;
-  }
-
   ListView _buildConnectDeviceView() {
     List<Widget> containers = <Widget>[];
     List<String> percentages = chartData![18].getPercentages();
+    List<String> counts = chartData![18].getCounts();
     containers.add(Container(
       margin: const EdgeInsets.all(24),
       child: Row(
@@ -247,13 +224,13 @@ class DisplayPageState extends State<DisplayPage> {
                       Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
-                          children: const [
+                          children: [
                             Text(
-                              "0",
-                              style: TextStyle(fontSize: 20),
+                              counts[0],
+                              style: const TextStyle(fontSize: 20),
                             ),
-                            SizedBox(width: 3),
-                            Text(
+                            const SizedBox(width: 3),
+                            const Text(
                               "reps",
                               style: TextStyle(fontSize: 15),
                             ),
@@ -292,13 +269,13 @@ class DisplayPageState extends State<DisplayPage> {
                       Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
-                          children: const [
+                          children: [
                             Text(
-                              "0",
-                              style: TextStyle(fontSize: 20),
+                              counts[1],
+                              style: const TextStyle(fontSize: 20),
                             ),
-                            SizedBox(width: 3),
-                            Text(
+                            const SizedBox(width: 3),
+                            const Text(
                               "reps",
                               style: TextStyle(fontSize: 15),
                             ),
@@ -337,13 +314,13 @@ class DisplayPageState extends State<DisplayPage> {
                       Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
-                          children: const [
+                          children: [
                             Text(
-                              "0",
-                              style: TextStyle(fontSize: 20),
+                              counts[2],
+                              style: const TextStyle(fontSize: 20),
                             ),
-                            SizedBox(width: 3),
-                            Text(
+                            const SizedBox(width: 3),
+                            const Text(
                               "reps",
                               style: TextStyle(fontSize: 15),
                             ),
@@ -383,6 +360,24 @@ class DisplayPageState extends State<DisplayPage> {
           ),
           title: Text(widget.title),
           centerTitle: true,
+          actions: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.loop),
+              tooltip: 'Restart Workout',
+              onPressed: () {
+                continueCallBack() async {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => DisplayPage(
+                            title: "Data Dashboard", connectedDevice: widget.connectedDevice)),
+                  );
+                }
+
+              showAlertDialog(context, continueCallBack);
+              },
+            ),
+          ],
         ),
         body: _buildView(),
       );
@@ -406,11 +401,14 @@ int fromBytesToInt32(int b3, int b2, int b1, int b0) {
 }
 
 class _ChartData {
-  _ChartData(this.time, this.tricept, this.bicept, this.forearm);
+  _ChartData(this.time, this.tricept, this.bicept, this.forearm, this.tc, this.bc, this.fc);
   final int time;
   final int tricept;
   final int bicept;
   final int forearm;
+  final int tc;
+  final int bc;
+  final int fc;
 
   List<String> getPercentages() {
     int sum = tricept + bicept + forearm;
@@ -422,4 +420,28 @@ class _ChartData {
     int div3 = (forearm / sum * 100).toInt();
     return ["$div1%", "$div2%", "$div3%"];
   }
+
+  List<String> getCounts() {
+    return ["$tc", "$fc", "$bc"];
+  }
+}
+
+showAlertDialog(BuildContext context,
+    VoidCallback continueCallBack) {
+  BlurryDialog alert = BlurryDialog(
+      "Are you sure you want to restart the workout?",
+      Column(
+        children: const <Widget>[
+          Text('This will reset all of the data on the page.'),
+        ],
+      ),
+      continueCallBack);
+
+  // show the dialog
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return alert;
+    },
+  );
 }
