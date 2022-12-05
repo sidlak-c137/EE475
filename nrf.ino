@@ -14,6 +14,15 @@
 #define SensorInputPin1 A2 // Bicept
 #define SensorInputPin2 A3 // Tricept
 
+#include <vector>
+#include <algorithm>
+#include <unordered_map>
+#include <cmath>
+#include <iterator>
+#include <numeric>
+
+using namespace std;
+
 EMGFilters myFilter;
 
 SAMPLE_FREQUENCY sampleRate = SAMPLE_FREQ_1000HZ;
@@ -28,11 +37,17 @@ static int Sum2 = 0;
 static int pastVals0 [FILTER];
 static int pastVals1 [FILTER];
 static int pastVals2 [FILTER];
+static int pastValsAvg [FILTER];
 static int idx = 0;
 static int pastVals0Sum = 0;
 static int pastVals1Sum = 0;
 static int pastVals2Sum = 0;
 static int pc = 0;
+static int rep_count = 0;
+static int since_last = 0;
+static char c0 = 0;
+static char c1 = 0;
+static char c2 = 0;
 
 unsigned long timeStamp;
 unsigned long timeBudget;
@@ -75,7 +90,7 @@ void setupARM(void)
   arms.begin();
   armc.setProperties(CHR_PROPS_NOTIFY);
   armc.setPermission(SECMODE_OPEN, SECMODE_OPEN);
-  armc.setFixedLen(3 * sizeof(int));
+  armc.setFixedLen( 4 *sizeof(int));
   armc.begin();
   armw.setProperties(CHR_PROPS_WRITE);
   armw.setPermission(SECMODE_OPEN, SECMODE_OPEN);
@@ -182,6 +197,51 @@ void loop() {
   envlope1 = pastVals1Sum / FILTER;
   envlope2 = pastVals2Sum / FILTER;
   idx = (idx + 1) % FILTER;
+
+  int value = (envlope0 + envlope1 + envlope2 ) / 3;
+
+  pastValsAvg[idx] = ( pastVals0[idx] + pastVals1[idx] + pastVals2[idx] ) / 3;
+  
+  std::vector<double> pastValsAvgVector(std::begin(pastValsAvg), std::end(pastValsAvg));
+  
+  double r_sum = std::accumulate(pastValsAvgVector.begin(), pastValsAvgVector.end(), 0.0);
+  double rolling_average = r_sum / FILTER;
+  std::vector<double> diff(FILTER);
+  std::transform(pastValsAvgVector.begin(), pastValsAvgVector.end(), diff.begin(), [rolling_average](long double x) { return x - rolling_average; });
+  double r_sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+  double rolling_std = std::sqrt(r_sq_sum / FILTER);
+
+  int max_num = 0;
+  int current_max = 0;
+  
+  if (abs(value - rolling_average) > rolling_std) {
+    for ( int j = 0; j < FILTER; j++) {
+        if (pastVals0[j] > max_num) {
+          max_num = pastVals0[j];
+          current_max = 0;
+        }
+        if (pastVals1[j] > max_num) {
+          max_num = pastVals1[j];
+          current_max = 1;
+        }
+        if (pastVals2[j] > max_num) {
+          max_num = pastVals2[j];
+          current_max = 2;
+        }
+     }
+    if (value > 350 && since_last > 230) {
+        since_last = 0;
+        rep_count++;
+        if (current_max == 0) {
+          c0++;
+        } else if (current_max == 1) {
+          c1++;
+        }else {
+          c2++;
+        }
+    }
+  }
+  since_last++;
   
   if (Bluefruit.connected()) {
     if (armw.read8() == 0x32 && cal == 1) {
@@ -206,14 +266,14 @@ void loop() {
       envlope0 = (envlope0 > Threshold0) ? envlope0 - Threshold0 : 0;
       envlope1 = (envlope1 > Threshold1) ? envlope1 - Threshold1 : 0;
       envlope2 = (envlope2 > Threshold2) ? envlope2 - Threshold2 : 0;
-      int armdata[3] = {envlope2, envlope0, envlope1};
+      int armdata[4] = {envlope2, envlope0, envlope1, (c2 << 24) | (c0 << 16) | (c1 << 8)};
       if ( pc % FILTER == 0 ) {
-        Serial.print("Sensor 0: ");
-        Serial.print(envlope0);
-        Serial.print(" ");
-        Serial.print(envlope1);
-        Serial.print(" ");  
-        Serial.println(envlope2);
+//        Serial.print("Sensor 0: ");
+//        Serial.print(envlope0);
+//        Serial.print(" ");
+//        Serial.print(envlope1);
+//        Serial.print(" ");  
+//        Serial.println(envlope2);
         armc.notify(armdata, sizeof(armdata));
       }
     }
