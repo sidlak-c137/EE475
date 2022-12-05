@@ -10,9 +10,9 @@
 #define TIMING_DEBUG 1
 #define FILTER 50
 
-#define SensorInputPin0 A0 // Forearm
-#define SensorInputPin1 A3 // Bicept
-#define SensorInputPin2 A5 // Tricept
+#define SensorInputPin0 A1 // Forearm
+#define SensorInputPin1 A2 // Bicept
+#define SensorInputPin2 A3 // Tricept
 
 EMGFilters myFilter;
 
@@ -32,6 +32,7 @@ static int idx = 0;
 static int pastVals0Sum = 0;
 static int pastVals1Sum = 0;
 static int pastVals2Sum = 0;
+static int pc = 0;
 
 unsigned long timeStamp;
 unsigned long timeBudget;
@@ -87,8 +88,8 @@ void disconnect_callback(uint16_t conn_handle, uint8_t reason)
   (void) conn_handle;
   (void) reason;
 
-  Serial.print("Disconnected, reason = 0x"); Serial.println(reason, HEX);
-  Serial.println("Advertising!");
+//  Serial.print("Disconnected, reason = 0x"); Serial.println(reason, HEX);
+//  Serial.println("Advertising!");
   cal = 0;
   Threshold0 = 0;
   Sum0 = 0;
@@ -107,8 +108,8 @@ void connect_callback(uint16_t conn_handle)
   char central_name[32] = { 0 };
   connection->getPeerName(central_name, sizeof(central_name));
 
-  Serial.print("Connected to ");
-  Serial.println(central_name);
+//  Serial.print("Connected to ");
+//  Serial.println(central_name);
   cal = 0;
   Threshold0 = 0;
   Sum0 = 0;
@@ -125,20 +126,20 @@ void setup() {
   /* add setup code here */
   myFilter.init(sampleRate, humFreq, true, true, true);
 
-  // open serial
+//   open serial
   Serial.begin(115200);
-
-  Serial.println("Bluefruit52 Start");
-  Serial.println("-----------------------\n");
+//
+//  Serial.println("Bluefruit52 Start");
+//  Serial.println("-----------------------\n");
   Bluefruit.begin();
   Bluefruit.Periph.setConnectCallback(connect_callback);
   Bluefruit.Periph.setDisconnectCallback(disconnect_callback);
 
-  Serial.println("Configuring the Armory Service");
+//  Serial.println("Configuring the Armory Service");
   setupARM();
 
   startAdv();
-  Serial.println("Advertising...");
+//  Serial.println("Advertising...");
 
   // setup for time cost measure
   // using micros()
@@ -184,7 +185,7 @@ void loop() {
   
   if (Bluefruit.connected()) {
     if (armw.read8() == 0x32 && cal == 1) {
-      Serial.println("Done Calibrating...");
+//      Serial.println("Done Calibrating...");
       Threshold0 = Sum0 / Count;
       Threshold1 = Sum1 / Count;
       Threshold2 = Sum2 / Count;
@@ -194,7 +195,7 @@ void loop() {
       Sum1 = 0;
       Sum2 = 0;
     } else if (armw.read8() == 0x31 || cal == 1) {
-      Serial.println("Calibrating...");
+//      Serial.println("Calibrating...");
       Sum0 += (envlope0 > 0) ? envlope0 : 0;
       Sum1 += (envlope1 > 0) ? envlope1 : 0;
       Sum2 += (envlope2 > 0) ? envlope2 : 0;
@@ -205,16 +206,19 @@ void loop() {
       envlope0 = (envlope0 > Threshold0) ? envlope0 - Threshold0 : 0;
       envlope1 = (envlope1 > Threshold1) ? envlope1 - Threshold1 : 0;
       envlope2 = (envlope2 > Threshold2) ? envlope2 - Threshold2 : 0;
-      int armdata[3] = {envlope0, envlope1, envlope2};
-      //Serial.print("Sensor 0: ");
-      Serial.print(envlope0);
-      Serial.print(" ");
-      Serial.print(envlope1);
-      Serial.print(" ");
-      Serial.println(envlope2);
-      armc.notify(armdata, sizeof(armdata));
+      int armdata[3] = {envlope2, envlope0, envlope1};
+      if ( pc % FILTER == 0 ) {
+        Serial.print("Sensor 0: ");
+        Serial.print(envlope0);
+        Serial.print(" ");
+        Serial.print(envlope1);
+        Serial.print(" ");  
+        Serial.println(envlope2);
+        armc.notify(armdata, sizeof(armdata));
+      }
     }
-
+  
   }
-  delayMicroseconds(1000);
+  pc++;
+  delayMicroseconds(2000);
 }
