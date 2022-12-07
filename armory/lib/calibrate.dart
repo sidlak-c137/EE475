@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -183,12 +184,43 @@ class CalibratePageState extends State<CalibratePage> {
           ),
           const SizedBox(height: 10),
           Text(
-            'Verify that the three lines are generally around 100 on the y-axis.',
+            'Verify that the three lines below 100 on the y-axis.',
             style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 30),
+          const Text(
+            'Tips for calibration:',
+            style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+      ),
+    ));
+
+    containers.add( Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            '     1) Apply hand sanitizer to the skin below each sensor',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '     2) Adjust the locations of each sensor on the arm',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '     3) Wait a while :)',
+            style: Theme.of(context).textTheme.bodyLarge,
+            
           ),
           const SizedBox(height: 20),
         ],
-      ),
     ));
 
     containers.add(_buildLiveLineChart());
@@ -207,7 +239,7 @@ class CalibratePageState extends State<CalibratePage> {
       ),
     ));
 
-    containers.add(ElevatedButton.icon(
+    containers.add(ElevatedButton(
       onPressed: () {
         Navigator.push(
           context,
@@ -216,8 +248,7 @@ class CalibratePageState extends State<CalibratePage> {
                 title: "Data Dashboard", connectedDevice: widget.connectedDevice)),
         );
       },
-      icon: const Icon(Icons.add),
-      label: const Text('CONTINUE'),
+      child: const Text('CONTINUE'),
     ));
 
     return ListView(
@@ -247,24 +278,6 @@ class CalibratePageState extends State<CalibratePage> {
           ),
           title: Text(widget.title),
           centerTitle: true,
-          actions: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.loop),
-              tooltip: 'Restart Workout',
-              onPressed: () {
-                continueCallBack() async {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => DisplayPage(
-                            title: "Data Dashboard", connectedDevice: widget.connectedDevice)),
-                  );
-                }
-
-              showAlertDialog(context, continueCallBack);
-              },
-            ),
-          ],
         ),
         body: _buildView(),
       );

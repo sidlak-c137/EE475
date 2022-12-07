@@ -54,8 +54,6 @@ class DisplayPageState extends State<DisplayPage> {
                 characteristic.setNotifyValue(true);
                 characteristic.value.listen((value) {
                   setState(() {
-                    print(value);
-                    print(value.length);
                     var real_value = List.generate(3, (int i) => fromBytesToInt32(value[4*i], value[4*i+1], value[4*i+2], value[4*i+3]), growable: true);
                     real_value.add(value[4*3+3]);
                     real_value.add(value[4*3+1]);

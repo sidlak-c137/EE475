@@ -1,3 +1,4 @@
+import 'package:armory/calibrate.dart';
 import 'package:armory/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -70,8 +71,8 @@ class ConnectPageState extends State<ConnectPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => DisplayPage(
-                          title: "Data Dashboard", connectedDevice: device)),
+                      builder: (context) => CalibratePage(
+                          title: "Calibrate", connectedDevice: device)),
                 );
               }
             }
@@ -80,7 +81,7 @@ class ConnectPageState extends State<ConnectPage> {
           },
           child: Column(
             children: <Widget>[
-              Text(device.name == '' ? '(unknown device)' : device.name),
+              Text(device.name == '' ? 'N/A' : device.name),
               Text(device.id.toString()),
             ],
           ),
