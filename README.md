@@ -12,8 +12,8 @@ This contains all of the firmware code for the ESP (outdated)
 #### nrf.ino
 This contains all of the firmware code for the NRF (in use)
 
-#### rep_counter.txt
-This contains a Google Colab link to the code we used to fine-tune the rep counter
+#### 475_rep_counter.ipynb
+This contains a notebook of the code we used to fine-tune the rep counter
 
 #### sample.txt
 This contains all of the training data for the rep counter.
